@@ -1,5 +1,5 @@
 # Multiple-Husky
-Repository contains multiple husky simulation and navigation in ros melodic and ros noetic
+Repository contains multiple husky simulation and navigation in ros melodic(completed) and ros noetic(in progress)
 ## Note
 * The repository assumes that you have all the dependency pacakges like robot_localization,twist_mux,interactive_marker_twist_server and so on installed properly.
 ### Create workspace and git clone the repository
