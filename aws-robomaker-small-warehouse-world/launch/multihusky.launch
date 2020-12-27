@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+
+<!-- 
+A launch file for setting up control of a Husky.
+-->
+<launch>
+
+  <param name="/use_sim_time" value="true"/>
+   <arg name="rvizconfig" default="$(find aws_robomaker_small_warehouse_world)/rviz/multi_husky.rviz" />
+
+  <!-- Run the map server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find aws_robomaker_small_warehouse_world)/maps/005/map.yaml" >
+    <param name="frame_id" value="map" />
+  </node>
+  <node name="rqt_console" pkg="rqt_console" type="rqt_console" output="screen" />
+
+
+<!-- Gazebo -->
+
+<include file="$(find aws_robomaker_small_warehouse_world)/launch/small_warehouse.launch" />
+
+<group ns="h1">
+  <include file="$(find aws_robomaker_small_warehouse_world)/launch/husky.launch">
+    <arg name="namespace" value="h1" />
+    <arg name="initX" value="-3" />
+    <arg name="initY" value="0" />
+    <arg name="initYaw" value="0" />
+    <arg name="husky_name" value="h1"/>
+  </include>
+    <param name="amcl/initial_pose_x" value="-3" />
+    <param name="amcl/initial_pose_y" value="0" />
+    <include file="$(find husky_navigation)/launch/move_base.launch">
+      <arg name="husky_name" value="h1"/>
+    </include>
+</group>
+
+<group ns="h2">
+  <include file="$(find aws_robomaker_small_warehouse_world)/launch/husky.launch">
+    <arg name="namespace" value="h2" />
+    <arg name="initX" value="-3" />
+    <arg name="initY" value="-3" />
+    <arg name="husky_name" value="h2"/>
+  </include>
+  <param name="amcl/initial_pose_x" value="-3" />
+    <param name="amcl/initial_pose_y" value="-3" />
+    <include file="$(find husky_navigation)/launch/move_base.launch">
+      <arg name="husky_name" value="h2"/>
+    </include>
+</group>
+
+<group ns="h3">
+  <include file="$(find aws_robomaker_small_warehouse_world)/launch/husky.launch">
+    <arg name="namespace" value="h3" />
+    <arg name="initX" value="-2" />
+    <arg name="initY" value="-2" />
+    <arg name="husky_name" value="h3"/>
+  </include>
+  <param name="amcl/initial_pose_x" value="-2" />
+    <param name="amcl/initial_pose_y" value="-2" />
+    <include file="$(find husky_navigation)/launch/move_base.launch">
+      <arg name="husky_name" value="h3"/>
+    </include>
+</group>
+
+<group ns="h4">
+  <include file="$(find aws_robomaker_small_warehouse_world)/launch/husky.launch">
+    <arg name="namespace" value="h4" />
+    <arg name="initX" value="-3" />
+    <arg name="initY" value="-1" />
+    <arg name="husky_name" value="h4"/>
+  </include>
+  <param name="amcl/initial_pose_x" value="-3" />
+    <param name="amcl/initial_pose_y" value="-1" />
+    <include file="$(find husky_navigation)/launch/move_base.launch">
+      <arg name="husky_name" value="h4"/>
+    </include>
+</group>
+<node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+</launch>
