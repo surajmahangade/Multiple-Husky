@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<launch>
+<!--
+  The simulated Husky and all the associated nodes (control, estimation, etc.) 
+  are wrapped in a namespace using a group tag.  The tf prefix is generated
+  using the namespace
+-->
+
+ <!--******************************-->
+  <!-- Husky in Gazebo -->
+  <!--******************************-->
+  <arg name="namespace" default="h1" />
+  <!-- Generate the tf_prefix from the namespace -->
+  <arg name="tfpre" default="$(arg namespace)_tf" />
+  <!-- Put value on the parameter server in the group's namespace -->
+  <!-- Initial pose - see "rosrun gazebo_ros spawn_model -h" for syntax -->
+  <arg name="initX" default="0" />
+  <arg name="initY" default="0" />
+  <arg name="initYaw" default="0" />
+  <arg name="laser_enabled" default="true"/>
+  <arg name="ur5_enabled" default="false"/>
+  <arg name="kinect_enabled" default="false"/>
+  <arg name="husky_name" default="h1"/>
+  
+  
+  <!-- The robot description tells Gazebo how to simulate
+       the IMU, GPS and ground truth -->
+   <!-- <param name="robot_description" command="$(find xacro)/xacro '$(find husky_description)/urdf/husky.urdf.xacro'
+    robot_namespace:=$(arg namespace)
+    laser_enabled:=$(arg laser_enabled)
+    tfpre:=$(arg tfpre)
+    nsp:=$(arg namespace)
+    " /> -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find husky_description)/urdf/husky.urdf.xacro'
+    robot_namespace:=$(arg namespace)
+    laser_enabled:=$(arg laser_enabled)
+    tfpre:=$(arg tfpre)
+    nsp:=$(arg namespace)
+    " />
+
+  <!-- Note we set the "name" of the model in Gazebo using the namespace -->
+  <node name="spawn_husky_model" pkg="gazebo_ros" type="spawn_model"
+	args="-x $(arg initX) -y $(arg initY) -Y $(arg initYaw) -unpause -urdf -param robot_description -model Husky_$(arg namespace)"/>
+
+  <!-- Start the state publisher node in the namespace - uses the 
+       joint states from gazebo
+       along with the URDF model (robot_description) to publish 
+       the joint positions to /tf --> 
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+  <param name="tf_prefix" value="$(arg namespace)_tf/" />
+  </node>
+
+  <!-- Here we spawn (load and launch) two controllers which become 
+       part of Gazebo. The key thing we need to do is to set the 
+       "base_frame_id" of the diff_drive_controller
+       to include the tf_prefix so that our tf trees work out.   
+       So, we load the default control configuration and then overwrite 
+       the base_frame_id -->
+  <rosparam command="load" file="$(find husky_control)/config/control.yaml" />
+  <rosparam param="husky_velocity_controller/base_frame_id" subst_value="True">$(arg tfpre)/base_link</rosparam>
+  <node name="base_controller_spawner" pkg="controller_manager" type="spawner" args="husky_joint_publisher husky_velocity_controller --shutdown-timeout 3"/>
+  
+  <!-- Localization using imu and odometry simulated by Gazebo -->
+ <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
+    <param name="tf_prefix" value="$(arg namespace)_tf" />
+    <rosparam command="load" file="$(find aws_robomaker_small_warehouse_world)/config/localization.yaml" />
+  </node>
+
+  
+
+  <!-- Fake localization: Uses the ground truth odometry from the 
+       P3D Gazebo plugin. This is necessary to provide a global frame
+       of reference. -->
+  <!-- <node pkg="fake_localization" type="fake_localization" name="fake_localization">
+    <param name="odom_frame_id" value="$(arg tfpre)/odom" />
+    <param name="delta_x" value="$(arg initX)" />
+    <param name="delta_y" value="$(arg initY)" />
+    <param name="delta_yaw" value="$(arg initYaw)" />
+    <param name="base_frame_id" value="$(arg tfpre)/base_link" />
+    <remap from="base_pose_ground_truth" to="/$(arg husky_name)/husky_velocity_controller/odom"/>
+
+  </node> -->
+ 
+  <!-- Or we could just set this as a static offset -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="map_odom_broadcaster" args="$(arg initX) $(arg initY) 0 $(arg initYaw) 0 0 /map /$(arg tfpre)/odom 100" /> -->
+ 
+     
+  <!-- Twister server for rviz control-->
+ <node pkg="interactive_marker_twist_server" type="marker_server" name="twist_marker_server" output="screen">
+   <param name="link_name" value="$(arg tfpre)/base_link" />
+ </node>
+
+ <!-- Twist mux is a node from Clearpath that mixes control commands from multiple sources -->
+  <node pkg="twist_mux" type="twist_mux" name="twist_mux">
+    <rosparam command="load" file="$(find husky_control)/config/twist_mux.yaml" />
+    <remap from="cmd_vel_out" to="husky_velocity_controller/cmd_vel"/>
+  </node>
+</launch>
